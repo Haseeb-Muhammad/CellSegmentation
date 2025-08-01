@@ -43,8 +43,9 @@ def main():
             gt = tif.imread(gt_path)
             
             image_count+=1
-            SEGAccuracy += segAccuracy(pred=pred, gt=gt, threshold=50)
-
+            
+            SEGAccuracy += segAccuracy(pred=pred, gt=gt, threshold=0.5)
+            break
     meanSEGAccuracy=SEGAccuracy / image_count
     print(f"{meanSEGAccuracy=}")
 

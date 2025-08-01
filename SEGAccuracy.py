@@ -57,15 +57,14 @@ def segAccuracy(pred:np.array, gt:np.array, threshold:int) -> float:
         pred_instance_mask = extract_mask(pred, pred_instance_id)
         pred_masks[pred_instance_id] = pred_instance_mask
 
-
     for gt_instance_id in gt_instance_ids:
         if gt_instance_id == 0:
             continue
         gt_instance_mask = extract_mask(gt, gt_instance_id)
         
-        # (pred_instance_id, iou)
-        greatest_match = (-1,-1)
-        for pred_instance_id in pred_instance_ids:
+        # (pred_instance_id, iou, idx_in_pred_instance_ids)
+        greatest_match = (-1,-1,-1)
+        for i, pred_instance_id in enumerate(pred_instance_ids):
             if pred_instance_id == 0:
                 continue
 
@@ -73,11 +72,14 @@ def segAccuracy(pred:np.array, gt:np.array, threshold:int) -> float:
             iou = calculate_iou(pred_mask=pred_instance_mask, gt_mask=gt_instance_mask)
 
             if iou>greatest_match[1]:
-                greatest_match = (pred_instance_id, iou)
+                greatest_match = (pred_instance_id, iou,i)
 
         if greatest_match[1] >= threshold:
             Tp +=1
             del pred_masks[greatest_match[0]]
+            pred_instance_ids = np.delete(pred_instance_ids,greatest_match[2])
+    
+    print(f"{Tp=}")
     
     return Tp / (len(gt_instance_ids)-1) #-1 to account for background in ground truth
 
