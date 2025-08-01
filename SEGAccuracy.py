@@ -72,7 +72,7 @@ def segAccuracy(pred:np.array, gt:np.array, threshold:int) -> float:
             pred_instance_mask = pred_masks[pred_instance_id]
             iou = calculate_iou(pred_mask=pred_instance_mask, gt_mask=gt_instance_mask)
 
-            if iou>greatest_match:
+            if iou>greatest_match[1]:
                 greatest_match = (pred_instance_id, iou)
 
         if greatest_match[1] >= threshold:

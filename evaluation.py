@@ -2,6 +2,7 @@ import os
 import argparse
 from SEGAccuracy import segAccuracy
 import tifffile as tif
+from tqdm import tqdm
 
 
 def parse_args():
@@ -10,8 +11,8 @@ def parse_args():
     parser.add_argument(
         "--root_directory",
         type=str,
-        required=True,
-        default="C:\\Users\\hasee\\Desktop\\DFKI\\datasets\\Fluo-N3DH-SIM+\\train")
+        required=False,
+        default="C:\\Users\\hasee\\Desktop\\DFKI\\codes\\evalSoftware\\testing_dataset")
 
     parser.add_argument(
         "--num_digits",
@@ -32,7 +33,7 @@ def main():
         gt_dir = os.path.join(args.root_directory, f"0{time}_GT", "SEG")
         pred_dir = os.path.join(args.root_directory, f"0{time}_RES")
         
-        for gt_name in os.listdir(gt_dir):
+        for gt_name in tqdm(os.listdir(gt_dir)):
             gt_path = os.path.join(gt_dir, gt_name)
 
             img_num = gt_name.split("seg")[1]
@@ -42,7 +43,7 @@ def main():
             gt = tif.imread(gt_path)
             
             image_count+=1
-            SEGAccuracy += segAccuracy(pred=pred, gt=gt)
+            SEGAccuracy += segAccuracy(pred=pred, gt=gt, threshold=50)
 
     meanSEGAccuracy=SEGAccuracy / image_count
     print(f"{meanSEGAccuracy=}")
