@@ -1,7 +1,9 @@
 # Byte-compiled / optimized / DLL files
+test.tif
 __pycache__/
 *.py[codz]
 *$py.class
+testing.ipynb
 
 # C extensions
 *.so

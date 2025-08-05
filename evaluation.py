@@ -18,7 +18,8 @@ def parse_args():
         "--num_digits",
         type=int,
         required=False,
-        default=1)
+        default=1
+    )
     
     args = parser.parse_args()
     return args
