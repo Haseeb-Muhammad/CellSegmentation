@@ -1,6 +1,6 @@
 import os
 import argparse
-from SEGAccuracy import segAccuracy
+from codes.postProcessing.metric_calculation import segAccuracy
 import tifffile as tif
 from tqdm import tqdm
 

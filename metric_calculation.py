@@ -1,37 +1,7 @@
 
 import numpy as np
 from sklearn.metrics import jaccard_score
-
-def extract_mask(img:np.array, id:int) -> np.array:
-    """
-    Extracts a binary mask from the input image where the pixels equal to the specified id are set to 1, and all others are set to 0.
-
-    Args:
-        img (np.array): Input image as a NumPy array.
-        id (int): The pixel value to extract as a mask.
-
-    Returns:
-        np.array: A binary mask of the same shape as `img`, with 1 where `img` equals `id`, and 0 elsewhere.
-    """
-    return np.where(img==id, 1,0)
-
-def calculate_iou(pred_mask: np.array, gt_mask: np.array) -> float:
-    """
-    Calculates the Intersection over Union (IoU) score between a predicted mask and a ground truth mask.
-    Args:
-        pred_mask (np.array): The predicted binary mask as a NumPy array.
-        gt_mask (np.array): The ground truth binary mask as a NumPy array.
-    Returns:
-        float: The IoU (Jaccard index) score between the predicted and ground truth masks.
-    Notes:
-        Both input masks should be of the same shape and contain binary values (0 or 1).
-    """
-    
-    gt_mask_flat = gt_mask.flatten()
-    pred_mask_flat = pred_mask.flatten()
-
-    iou = jaccard_score(gt_mask_flat, pred_mask_flat)
-    return iou
+from utils import extract_mask, calculate_iou
 
 def segAccuracy(pred:np.array, gt:np.array, threshold:int) -> float:
     """
@@ -83,3 +53,20 @@ def segAccuracy(pred:np.array, gt:np.array, threshold:int) -> float:
     
     return Tp / (len(gt_instance_ids)-1) #-1 to account for background in ground truth
 
+def calculate_iou(pred_mask: np.array, gt_mask: np.array) -> float:
+    """
+    Calculates the Intersection over Union (IoU) score between a predicted mask and a ground truth mask.
+    Args:
+        pred_mask (np.array): The predicted binary mask as a NumPy array.
+        gt_mask (np.array): The ground truth binary mask as a NumPy array.
+    Returns:
+        float: The IoU (Jaccard index) score between the predicted and ground truth masks.
+    Notes:
+        Both input masks should be of the same shape and contain binary values (0 or 1).
+    """
+    
+    gt_mask_flat = gt_mask.flatten()
+    pred_mask_flat = pred_mask.flatten()
+
+    iou = jaccard_score(gt_mask_flat, pred_mask_flat)
+    return iou

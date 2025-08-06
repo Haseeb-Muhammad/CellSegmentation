@@ -6,18 +6,22 @@ import matplotlib.pyplot as plt
 from skimage.color import label2rgb
 from skimage.measure import label
 from skimage.measure import label, regionprops
+import copy
+from sklearn.metrics import jaccard_score
 
 def color_instances_from_sobel(sobel_image: np.ndarray, threshold: int = 50) -> np.ndarray:
     """
-    Detect and uniquely color instances from a Sobel-filtered image.
-    
-    Args:
-        sobel_image (np.ndarray): 2D image (grayscale) after applying Sobel filtering.
-        threshold (int): Threshold to binarize the Sobel image. Default is 50.
-        
+    Labels and colors connected instances in a Sobel edge image.
+    This function processes a Sobel edge-detected image to identify and label distinct connected regions (instances).
+    It applies thresholding, morphological closing, and connected component labeling. The background label is set
+    to the most frequent label in the image to ensure consistency.
+    Args:                       
+        sobel_image (np.ndarray): Input Sobel edge image as a 2D NumPy array.
+        threshold (int, optional): Threshold value for binarizing the edge image. Defaults to 50.
     Returns:
-        np.ndarray: RGB image with uniquely colored instances.
+        np.ndarray: A 2D array of the same shape as `sobel_image`, where each connected instance is assigned a unique label.
     """
+
     # Threshold to create binary edge image
     _, binary = cv2.threshold(sobel_image, threshold, 255, cv2.THRESH_BINARY)
 
@@ -53,6 +57,16 @@ def color_instances_from_sobel(sobel_image: np.ndarray, threshold: int = 50) -> 
 
 #@print_param_shapes
 def plot_sobel_gradients(slice):
+    """
+    Computes the combined Sobel gradient magnitude for each color channel of an RGB image slice.
+    This function calculates the Sobel gradients in both the x and y directions for each of the
+    three color channels (Red, Green, Blue) of the input image. It then computes the gradient
+    magnitude for each channel and combines them to produce a single gradient magnitude image.
+    Args:
+        slice (np.ndarray): An RGB image slice as a NumPy array of shape (H, W, 3).
+    Returns:
+        np.ndarray: A 2D array representing the combined gradient magnitude of the input image.
+    """
 
     image = cv2.cvtColor(slice, cv2.COLOR_RGB2BGR)
     image = slice
@@ -69,6 +83,38 @@ def plot_sobel_gradients(slice):
         gradients['R']**2 + gradients['G']**2 + gradients['B']**2
     )
     return total_gradient
+
+def remove_noise(slice : np.array, threshold: int = 20) -> np.array:
+    '''
+        Remvoes noises from the image based on count of the instance
+
+        Args:
+            slice (np.array): 2D gray scale image representing a slice in 3D image s
+            threshold (int): threshold for count of instance pixels 
+    
+        Returns:
+            np.array : slice with noise removed through count thresholding
+    '''
+    instance_ids, counts = np.unique(slice, return_counts=True)
+    noise_removed = copy.deepcopy(slice)
+    for i, instance_id in enumerate(instance_ids):
+        if counts[i] < threshold:
+            noise_removed = np.where(noise_removed==instance_id, 0, slice)
+    
+    return noise_removed
+
+def extract_mask(img:np.array, id:int) -> np.array:
+    """
+    Extracts a binary mask from the input image where the pixels equal to the specified id are set to 1, and all others are set to 0.
+
+    Args:
+        img (np.array): Input image as a NumPy array.
+        id (int): The pixel value to extract as a mask.
+
+    Returns:
+        np.array: A binary mask of the same shape as `img`, with 1 where `img` equals `id`, and 0 elsewhere.
+    """
+    return np.where(img==id, 1,0)
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -91,7 +137,6 @@ def parse_args():
     return args
 
 
-
 def main():
     args = parse_args()
     img = tiff.imread(args.source_directory)
@@ -101,7 +146,8 @@ def main():
         #slice is (h,w,3)
         gradients = plot_sobel_gradients(slice)
         uniform_prediction = color_instances_from_sobel(gradients)
-        processed_img.append(uniform_prediction)
+        noise_removed = remove_noise(slice=uniform_prediction)
+        processed_img.append(noise_removed)
         
     processed_img = np.array(processed_img)
     print(f"{processed_img.shape=}")
