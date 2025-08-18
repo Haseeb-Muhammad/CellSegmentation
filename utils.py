@@ -97,10 +97,12 @@ def remove_noise(slice : np.array, threshold: int = 20) -> np.array:
     '''
     instance_ids, counts = np.unique(slice, return_counts=True)
     noise_removed = copy.deepcopy(slice)
+    instances_removed=0
     for i, instance_id in enumerate(instance_ids):
         if counts[i] < threshold:
             noise_removed = np.where(noise_removed==instance_id, 0, slice)
-    
+            instances_removed+=1
+
     return noise_removed
 
 def extract_mask(img:np.array, id:int) -> np.array:
@@ -115,6 +117,72 @@ def extract_mask(img:np.array, id:int) -> np.array:
         np.array: A binary mask of the same shape as `img`, with 1 where `img` equals `id`, and 0 elsewhere.
     """
     return np.where(img==id, 1,0)
+
+
+
+def load_tiff(path):
+    """Load a 3D TIFF file into a NumPy array."""
+    return tiff.imread(path)
+
+def iou_3d(mask1, mask2):
+    """Compute 3D IoU between two binary masks."""
+    intersection = np.logical_and(mask1, mask2).sum()
+    union = np.logical_or(mask1, mask2).sum()
+    return intersection / union if union > 0 else 0.0
+
+def evaluate_instance_segmentation(gt_path, pred_path, iou_threshold=0.5):
+    # Load masks
+    gt = load_tiff(gt_path)
+    pred = load_tiff(pred_path)
+
+    # Unique instance IDs (excluding background=0)
+    gt_instances = np.unique(gt)
+    gt_instances = gt_instances[gt_instances != 0]
+
+    pred_instances = np.unique(pred)
+    pred_instances = pred_instances[pred_instances != 0]
+
+    tp, fp, fn = 0, 0, 0
+    matched_pred = set()
+
+    for gt_id in gt_instances:
+        gt_mask = (gt == gt_id)
+        best_iou = 0
+        best_pred_id = None
+
+        for pred_id in pred_instances:
+            if pred_id in matched_pred:
+                continue
+            pred_mask = (pred == pred_id)
+            iou = iou_3d(gt_mask, pred_mask)
+            if iou > best_iou:
+                best_iou = iou
+                best_pred_id = pred_id
+
+        if best_iou >= iou_threshold:
+            tp += 1
+            matched_pred.add(best_pred_id)
+        else:
+            fn += 1
+
+    # Any prediction that wasn't matched to a GT is a false positive
+    fp = len(pred_instances) - len(matched_pred)
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+    return {
+        "TP": tp,
+        "FP": fp,
+        "FN": fn,
+        "Precision": precision,
+        "Recall": recall,
+        "F1": f1
+    }
+
+# Example usage:
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -136,22 +204,9 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-
 def main():
-    args = parse_args()
-    img = tiff.imread(args.source_directory)
-
-    processed_img = []
-    for slice_no, slice in enumerate(img):
-        #slice is (h,w,3)
-        gradients = plot_sobel_gradients(slice)
-        uniform_prediction = color_instances_from_sobel(gradients)
-        noise_removed = remove_noise(slice=uniform_prediction)
-        processed_img.append(noise_removed)
-        
-    processed_img = np.array(processed_img)
-    print(f"{processed_img.shape=}")
-    tiff.imwrite(args.destination_directory, processed_img)
+    results = evaluate_instance_segmentation(gt_path="/netscratch/muhammad/datasets/Fluo-N3DH-SIM+/Combined/01_GT/SEG/man_seg131.tif", pred_path="/netscratch/muhammad/datasets/Fluo-N3DH-SIM+/Combined/01_RES/mask131.tif", iou_threshold=0.5)
+    print(results)
 
     
     
